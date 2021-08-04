@@ -1,6 +1,7 @@
 from time import sleep
 from display import Display
 from buttons import setup_button_callback
+import asyncio
 
 menu = ["Light", "Medium", "Dark", "Custom"]
 
@@ -39,13 +40,13 @@ class Menu:
             self.display_menu()
         if action == "confirm":
             self.done = True
-            self.display.clear()
-            self.display.show("Menu Selected!", 1)
-            self.display.show("\"{}\"".format(menu[self.current_menu_index]), 2)
             sleep(1)
 
-    def get_menu(self):
+    async def selected(self):
+        while not self.done:
+            await asyncio.sleep(1)
+        self.display.clear()
+        self.display.show("Menu Selected!", 1)
+        self.display.show("\"{}\"".format(menu[self.current_menu_index]), 2)
+        await asyncio.sleep(1)
         return menu[self.current_menu_index]
-    
-    def is_done(self):
-        return self.done

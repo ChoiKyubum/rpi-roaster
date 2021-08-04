@@ -29,7 +29,6 @@ class Roast:
         self.thermo = Thermo()
         self.current_temperature = self.thermo.get_temperature()
         if menu == "Custom":
-            print("SET Button Callback")
             setup_button_callback(self.custom_control_callbacks)
 
         while self.roast(menu):
@@ -78,7 +77,7 @@ class Roast:
                 self.working = False
 
     def display_status(self, temp):
-        status = "{}|{}|{}".format(self.target_temperature, temp, self.get_ror(temp))
+        status = "{}|{:0.3f}|{:0.3f}".format(self.target_temperature, temp, self.get_ror(temp))
         minutes = "{}".format(math.floor(self.seconds / 60)).rjust(2, "0")
         seconds = "{}".format(self.seconds % 60).rjust(2, "0")
         time = "{}:{}".format(minutes, seconds)
