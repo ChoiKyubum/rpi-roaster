@@ -23,7 +23,8 @@ class Display:
             self.lcd.setCursor(0, line - 1)
             self.lcd.print(str.ljust(16, " "))
         except OSError as err:
-            print(err)
+            self.is_working = False
+            print("LCD Error: {}".format(err))
             self.lcd = LCD_Driver.lcd(0x27)
             self.show(str, line)
         self.is_working = False

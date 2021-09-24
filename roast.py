@@ -7,11 +7,13 @@ import math
 
 fan = LED(17)
 heater = LED(27)
+period = 0.25
 
 class Roast:
     def __init__(self):
-        self.target_temperature = 190
-        self.target_ror = 0.5
+        self.target_temperature = 200
+        self.target_ror = 1.0
+        self.rors = []
         self.seconds = 0
         self.heater_on = True
         self.working = True
@@ -32,24 +34,25 @@ class Roast:
             setup_button_callback(self.custom_control_callbacks)
 
         while self.roast(menu):
-            sleep(1)
-            self.seconds += 1
+            sleep(period)
+            self.seconds += period
         fan.off()
         sleep(5)
     
     def roast(self, menu):
         temp = self.thermo.get_temperature()
-        self.display_status(temp)
         if self.heater_on == True:
             self.set_heater(temp)
         elif heater.value == 1:
             heater.off()
+        self.display_status(temp)
         self.current_temperature = temp
         return self.working
             
     def set_heater(self, temp):
-        if self.target_temperature <= temp and heater.value == 1:
-            heater.off()
+        if self.target_temperature <= temp:
+            if heater.value == 1:
+                heater.off()
             return
 
         if self.get_ror(temp) > self.target_ror:
@@ -59,7 +62,11 @@ class Roast:
         heater.on()
 
     def get_ror(self, temp):
-        return temp - self.current_temperature
+        current_ror = (temp - self.current_temperature) / period
+        self.rors.append(current_ror)
+        if len(self.rors) > 10:
+            self.rors.pop(0)
+        return sum(self.rors) / len(self.rors)
 
     def custom_control_callbacks(self, action):
         if action == "left":
@@ -77,9 +84,10 @@ class Roast:
                 self.working = False
 
     def display_status(self, temp):
-        status = "{}|{:0.3f}|{:0.3f}".format(self.target_temperature, temp, self.get_ror(temp))
+        avg_ror = sum(self.rors) / len(self.rors)
+        status = "{}|{:0.3f}|{:0.3f}".format(self.target_temperature, temp, avg_ror)
         minutes = "{}".format(math.floor(self.seconds / 60)).rjust(2, "0")
-        seconds = "{}".format(self.seconds % 60).rjust(2, "0")
+        seconds = "{:0.1f}".format(self.seconds % 60).rjust(4, "0")
         time = "{}:{}".format(minutes, seconds)
         self.display.show(status, 1)
         self.display.show(time, 2)
