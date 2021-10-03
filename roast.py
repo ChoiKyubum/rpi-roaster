@@ -4,22 +4,28 @@ from time import sleep
 from buttons import setup_button_callback
 from display import Display
 import math
+from datetime import datetime 
 
 fan = LED(17)
 heater = LED(27)
 period = 0.25
 
+ROASTING = "ROASTING"
+COOLING = "COOLING"
+
 class Roast:
     def __init__(self):
-        self.target_temperature = 200
-        self.target_ror = 1.0
+        self.target_temperature = 195
+        self.target_ror = 1.8
         self.rors = []
-        self.seconds = 0
         self.heater_on = True
         self.working = True
         self.current_temperature = None
         self.thermo = None
         self.display = Display()
+        self.start_time = 0
+        self.end_time = 0
+        self.process = ROASTING
 
     def start(self, menu):
         self.display.clear()
@@ -28,6 +34,7 @@ class Roast:
         fan.on()
         sleep(0.5)
         heater.on()
+        self.start_time = datetime.now()
         self.thermo = Thermo()
         self.current_temperature = self.thermo.get_temperature()
         if menu == "Custom":
@@ -35,7 +42,6 @@ class Roast:
 
         while self.roast(menu):
             sleep(period)
-            self.seconds += period
         fan.off()
         sleep(5)
     
@@ -47,7 +53,12 @@ class Roast:
             heater.off()
         self.display_status(temp)
         self.current_temperature = temp
-        return self.working
+        return self.is_done()
+
+    def is_done(self):
+        if self.process == COOLING:
+            return self.current_temperature < 60
+        return True
             
     def set_heater(self, temp):
         if self.target_temperature <= temp:
@@ -76,18 +87,23 @@ class Roast:
             self.target_temperature += 10
             self.display_status(self.thermo.get_temperature())
         if action == "confirm":
-            if self.heater_on:
-                self.heater_on = False
-                self.display.show("Heater OFF", 1)
-            else :
-                self.display.show("Finish Roasting", 1)
-                self.working = False
+            self.heater_on = False
+            self.display.show("Start Cooling", 1)
+            self.end_time = datetime.now()
+            self.process = COOLING
 
     def display_status(self, temp):
-        avg_ror = sum(self.rors) / len(self.rors)
-        status = "{}|{:0.3f}|{:0.3f}".format(self.target_temperature, temp, avg_ror)
-        minutes = "{}".format(math.floor(self.seconds / 60)).rjust(2, "0")
-        seconds = "{:0.1f}".format(self.seconds % 60).rjust(4, "0")
-        time = "{}:{}".format(minutes, seconds)
-        self.display.show(status, 1)
-        self.display.show(time, 2)
+        if self.process == COOLING:
+            avg_ror = sum(self.rors) / len(self.rors)
+            status = "{}|{:0.3f}|{:0.3f}".format(self.target_temperature, temp, avg_ror)
+            self.display.show(status, 1)
+            self.display.show(self.get_time_text(datetime.now()), 2)
+        else:
+            self.display.show("Cooling", 1)
+            self.display.show(self.get_time_text(self.end_time), 2)
+
+    def get_time_text(self, time):
+        duration_seconds = (time - self.start_time).seconds
+        minutes = "{}".format(math.floor(duration_seconds / 60)).rjust(2, "0")
+        seconds = "{}".format(duration_seconds % 60).rjust(2, "0")
+        return "{}:{}".format(minutes, seconds)
